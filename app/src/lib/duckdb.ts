@@ -202,23 +202,25 @@ export async function queryCausalEffect(
   }
 }
 
+/** Build mmsi → CausalEffectRow map from a raw row array (exported for tests). */
+export function buildCausalEffectsMap(rows: CausalEffectRow[]): Map<string, CausalEffectRow> {
+  const map = new Map<string, CausalEffectRow>();
+  for (const r of rows) map.set(r.mmsi, r);
+  return map;
+}
+
 /** Load causal ATT for all vessels in one query. Returns mmsi → CausalEffectRow map. */
 export async function queryAllCausalEffects(
   conn: duckdb.AsyncDuckDBConnection
 ): Promise<Map<string, CausalEffectRow>> {
-  const map = new Map<string, CausalEffectRow>();
-  if (!isParquetRegistered("causal_effects.parquet")) return map;
+  if (!isParquetRegistered("causal_effects.parquet")) return new Map();
   try {
     const result = await conn.query(
       `SELECT mmsi, regime, att_estimate, att_ci_lower, att_ci_upper, p_value, is_significant
        FROM read_parquet('causal_effects.parquet')`
     );
-    for (const row of result.toArray()) {
-      const r = row.toJSON() as CausalEffectRow;
-      map.set(r.mmsi, r);
-    }
-  } catch { /* table not yet synced */ }
-  return map;
+    return buildCausalEffectsMap(result.toArray().map((r) => r.toJSON() as CausalEffectRow));
+  } catch { return new Map(); }
 }
 
 /**

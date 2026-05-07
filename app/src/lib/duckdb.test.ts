@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { buildCausalEffectsMap } from "./duckdb";
+import type { CausalEffectRow } from "./duckdb";
 
 // Test the ALLOCATED_MIDS set logic by importing the module and checking
 // that known unallocated MIDs are not in the allocated set.
@@ -107,5 +109,44 @@ describe("stateless MMSI detection", () => {
 
   it("does not flag MID 698 (Africa region) as stateless", () => {
     expect(isStateless("698806645")).toBe(false);
+  });
+});
+
+// ── buildCausalEffectsMap ────────────────────────────────────────────────────
+
+const causalRow = (mmsi: string, att: number, significant = true): CausalEffectRow => ({
+  mmsi,
+  regime: "OFAC Iran",
+  att_estimate: att,
+  att_ci_lower: att - 0.05,
+  att_ci_upper: att + 0.05,
+  p_value: significant ? 0.02 : 0.20,
+  is_significant: significant,
+});
+
+describe("buildCausalEffectsMap", () => {
+  it("returns empty map for empty input", () => {
+    expect(buildCausalEffectsMap([]).size).toBe(0);
+  });
+
+  it("keys map by mmsi", () => {
+    const map = buildCausalEffectsMap([causalRow("111111111", 0.3), causalRow("222222222", 0.1)]);
+    expect(map.size).toBe(2);
+    expect(map.get("111111111")?.att_estimate).toBe(0.3);
+    expect(map.get("222222222")?.att_estimate).toBe(0.1);
+  });
+
+  it("last row wins on duplicate mmsi", () => {
+    const map = buildCausalEffectsMap([causalRow("111111111", 0.3), causalRow("111111111", 0.5)]);
+    expect(map.get("111111111")?.att_estimate).toBe(0.5);
+  });
+
+  it("preserves all CausalEffectRow fields", () => {
+    const row = causalRow("123456789", 0.241);
+    const map = buildCausalEffectsMap([row]);
+    const r = map.get("123456789")!;
+    expect(r.regime).toBe("OFAC Iran");
+    expect(r.is_significant).toBe(true);
+    expect(r.p_value).toBeCloseTo(0.02);
   });
 });
