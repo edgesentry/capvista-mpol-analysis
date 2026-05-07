@@ -8,6 +8,7 @@
  */
 import { useEffect, useState } from "react";
 import { initDuckDB, queryMetrics, queryWatchlist } from "../lib/duckdb";
+import type { MetricsRow } from "../lib/duckdb";
 import { syncAndLoad } from "../lib/opfs";
 import type { SyncStatus } from "../lib/opfs";
 import type { AsyncDuckDB, AsyncDuckDBConnection } from "@duckdb/duckdb-wasm";
@@ -32,16 +33,12 @@ interface AdminMetrics {
 }
 
 // ---------------------------------------------------------------------------
-// Data queries
+// Pure derivation helpers (exported for tests)
 // ---------------------------------------------------------------------------
 
-async function queryAdminMetrics(
-  conn: AsyncDuckDBConnection,
+export function deriveWatchlistHealth(
   vessels: Awaited<ReturnType<typeof queryWatchlist>>
-): Promise<AdminMetrics> {
-  const metrics = await queryMetrics(conn);
-
-  // Watchlist aggregations from already-fetched vessels
+) {
   const highConfidence = vessels.filter((v) => v.confidence >= 0.75).length;
   const regionMap = new Map<string, { count: number; highCount: number }>();
   for (const v of vessels) {
@@ -54,6 +51,40 @@ async function queryAdminMetrics(
   const byRegion = [...regionMap.entries()]
     .map(([region, { count, highCount }]) => ({ region, count, highCount }))
     .sort((a, b) => b.count - a.count);
+  return { highConfidence, byRegion };
+}
+
+export function normaliseMetricFields(metrics: MetricsRow | null) {
+  return {
+    p50:
+      (metrics?.backtest_p_at_50 as number | null) ??
+      (metrics?.precision_at_50 as number | null) ??
+      (metrics?.backtest_summary_p_at_50 as number | null) ??
+      null,
+    auroc:
+      (metrics?.backtest_auroc as number | null) ??
+      (metrics?.auroc as number | null) ??
+      (metrics?.backtest_summary_auroc as number | null) ??
+      null,
+    recall:
+      (metrics?.backtest_recall_at_200 as number | null) ??
+      (metrics?.recall_at_200 as number | null) ??
+      null,
+    modelVersion: (metrics?.model_version as string | null) ?? null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Data queries
+// ---------------------------------------------------------------------------
+
+async function queryAdminMetrics(
+  conn: AsyncDuckDBConnection,
+  vessels: Awaited<ReturnType<typeof queryWatchlist>>
+): Promise<AdminMetrics> {
+  const metrics = await queryMetrics(conn);
+
+  const { highConfidence, byRegion } = deriveWatchlistHealth(vessels);
 
   // Causal effects — significant vessel count
   let significantCausal = 0;
@@ -74,22 +105,7 @@ async function queryAdminMetrics(
   const lastSeenDates = vessels.map((v) => v.last_seen).filter(Boolean).sort();
   const watchlistUpdatedAt = lastSeenDates.at(-1) ?? null;
 
-  // Field name normalisation (fixture vs production may differ)
-  const p50 =
-    (metrics?.backtest_p_at_50 as number | null) ??
-    (metrics?.precision_at_50 as number | null) ??
-    (metrics?.backtest_summary_p_at_50 as number | null) ??
-    null;
-  const auroc =
-    (metrics?.backtest_auroc as number | null) ??
-    (metrics?.auroc as number | null) ??
-    (metrics?.backtest_summary_auroc as number | null) ??
-    null;
-  const recall =
-    (metrics?.backtest_recall_at_200 as number | null) ??
-    (metrics?.recall_at_200 as number | null) ??
-    null;
-  const modelVersion = (metrics?.model_version as string | null) ?? null;
+  const { p50, auroc, recall, modelVersion } = normaliseMetricFields(metrics);
 
   return {
     auroc,
