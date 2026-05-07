@@ -1,40 +1,50 @@
 # arktrace
 
-Shadow fleet candidate screening — AIS ingestion → causal inference → ranked watchlist → analyst dashboard.
+**Shadow fleet analyst dashboard — ranked watchlist, vessel investigation, and patrol handoff.**
 
 **Live app:** [arktrace.edgesentry.io](https://arktrace.edgesentry.io)
 
-## Quick start
+---
+
+## What analysts get
+
+- **Ranked watchlist** — vessels scored by causal intent, not anomaly. Each entry shows confidence, region, AIS gap count, and STS transfer candidates.
+- **Vessel detail** — SHAP attribution panel showing which signals drove the score; AIS track; ownership graph path.
+- **Patrol brief** — plain-language dispatch summary generated locally in the browser. No score or evidence leaves the site.
+- **Review workflow** — triage (Watch / Escalate / Dismiss), handoff status, and review history synced across sessions.
+- **Pre-designation lead time** — validates detections against known OFAC designation dates; typical lead: 60–90 days.
+
+## Open the app
 
 ```bash
-# Dashboard (no server required)
 cd app && npm install && npm run dev   # http://localhost:5173
-
-# Pipeline
-uv sync --all-extras
-uv run python scripts/run_pipeline.py --region singapore --non-interactive
 ```
 
-## What it does
+Select a region → watchlist loads → click any vessel → SHAP breakdown and AIS track appear.
 
-Applies Difference-in-Differences (DiD) causal modelling to identify vessels whose behaviour changed *because of* a sanction event — not merely anomalous vessels. Two-phase architecture:
+Demo data (no pipeline required):
 
-1. **Deterministic scoring pipeline** — AIS features, Isolation Forest, HDBSCAN, ownership graph risk, DiD causal model, SHAP attribution. No LLM.
-2. **Bounded text synthesis** — browser generates plain-language patrol briefs via a local LLM with strict anti-hallucination constraints. LLM cannot modify scores or access external data. See [docs/ref-llm-grounding.md](docs/ref-llm-grounding.md).
+```bash
+npx skills add edgesentry/arktrace
+/arktrace-demo-data
+```
 
-**Validated metrics (blind run, singapore, 2026-04-14):**
+---
 
-| Metric | Value |
-|---|---|
-| AUROC | 1.0 |
-| Precision@50 (multi-region, ≥50 labels) | 0.68 |
-| Precision@50 contractual gate | ≥ 0.60 |
+## Detection methodology
 
-## Scope
+arktrace applies Difference-in-Differences (DiD) causal modelling to identify vessels whose behaviour changed *because of* a sanction event — not merely anomalous vessels.
 
-**This repo:** AIS ingestion → feature engineering → scoring → watchlist → browser dashboard.
+| | Anomaly detection (excluded) | arktrace causal inference |
+|---|---|---|
+| Unit of evaluation | A point — "does this vessel look unusual?" | A line — "did behaviour change *because of* a sanctions event?" |
+| False positive driver | Any vessel that deviates | Only vessels whose deviation is statistically linked to a trigger |
+| Lead time | Reactive | 60–90 days pre-designation |
+| Output | Score + threshold | ATT ± 95% CI, p-value, SHAP signal breakdown |
 
-**Out of scope:** Physical vessel inspection, edge sensors, VDES — those belong in [edgesentry-rs](https://github.com/edgesentry/edgesentry-rs).
+Scoring is fully deterministic — no LLM in the pipeline. The browser generates patrol briefs via a local LLM with strict grounding constraints; the LLM cannot modify scores. See [docs/ref-llm-grounding.md](docs/ref-llm-grounding.md).
+
+---
 
 ## Agent Skills
 
