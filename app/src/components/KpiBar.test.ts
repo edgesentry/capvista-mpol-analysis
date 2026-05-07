@@ -45,8 +45,6 @@ describe("deriveMetricKpis", () => {
     const kpis = deriveMetricKpis(null);
     expect(kpis.p50).toBeNull();
     expect(kpis.auroc).toBeNull();
-    expect(kpis.leadDays).toBeNull();
-    expect(kpis.preDesig).toBeNull();
   });
 
   it("reads precision_at_50 and auroc from metrics", () => {
@@ -64,20 +62,5 @@ describe("deriveMetricKpis", () => {
     const { p50, auroc } = deriveMetricKpis(metrics);
     expect(p50).toBe(0.62);
     expect(auroc).toBe(0.87);
-  });
-
-  it("prefers median_lead_days over mean_lead_days", () => {
-    const metrics: MetricsRow = { median_lead_days: 28, mean_lead_days: 30 };
-    expect(deriveMetricKpis(metrics).leadDays).toBe(28);
-  });
-
-  it("falls back to mean_lead_days when median absent", () => {
-    const metrics: MetricsRow = { mean_lead_days: 30 };
-    expect(deriveMetricKpis(metrics).leadDays).toBe(30);
-  });
-
-  it("reads pre_designation_count", () => {
-    const metrics: MetricsRow = { pre_designation_count: 7 };
-    expect(deriveMetricKpis(metrics).preDesig).toBe(7);
   });
 });

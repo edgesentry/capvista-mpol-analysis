@@ -43,14 +43,12 @@ export function deriveMetricKpis(metrics: MetricsRow | null) {
   return {
     p50: metrics?.precision_at_50 ?? metrics?.backtest_summary_p_at_50 ?? null,
     auroc: metrics?.auroc ?? metrics?.backtest_summary_auroc ?? null,
-    leadDays: metrics?.median_lead_days ?? metrics?.mean_lead_days ?? null,
-    preDesig: metrics?.pre_designation_count ?? null,
   };
 }
 
 export default function KpiBar({ vessels, metrics, unreadAlerts = 0, onBellClick }: Props) {
   const { total, high, avg } = deriveVesselKpis(vessels);
-  const { p50, auroc, leadDays, preDesig } = deriveMetricKpis(metrics);
+  const { p50, auroc } = deriveMetricKpis(metrics);
 
   return (
     <div
@@ -66,18 +64,6 @@ export default function KpiBar({ vessels, metrics, unreadAlerts = 0, onBellClick
       <Kpi label="Candidates" value={total > 0 ? String(total) : "—"} />
       <Kpi label="High (≥0.75)" value={total > 0 ? String(high) : "—"} />
       <Kpi label="Avg confidence" value={total > 0 ? avg : "—"} />
-      {leadDays != null && (
-        <Kpi
-          label="Lead time (median)"
-          value={typeof leadDays === "number" ? `${leadDays}d` : String(leadDays)}
-        />
-      )}
-      {preDesig != null && (
-        <Kpi
-          label="Pre-designation"
-          value={String(preDesig)}
-        />
-      )}
       {p50 != null && (
         <Kpi
           label="Precision@50"
