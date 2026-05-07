@@ -95,11 +95,14 @@ async function queryAdminMetrics(
     significantCausal = Number(result.toArray()[0]?.toJSON().n ?? 0);
   } catch { /* table absent */ }
 
-  // Unreviewed — vessels with no review decision
-  const reviewStates = await getBulkReviewStates(conn, vessels.map((v) => v.mmsi));
-  const unreviewed = vessels.filter(
-    (v) => !reviewStates.get(v.mmsi)?.decision_tier
-  ).length;
+  // Unreviewed — vessels with no review decision (table absent = none reviewed yet)
+  let unreviewed = vessels.length;
+  try {
+    const reviewStates = await getBulkReviewStates(conn, vessels.map((v) => v.mmsi));
+    unreviewed = vessels.filter(
+      (v) => !reviewStates.get(v.mmsi)?.decision_tier
+    ).length;
+  } catch { /* vessel_reviews table not yet initialised */ }
 
   // Watchlist freshness from last_seen
   const lastSeenDates = vessels.map((v) => v.last_seen).filter(Boolean).sort();
