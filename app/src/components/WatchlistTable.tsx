@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import type { VesselRow } from "../lib/duckdb";
+import type { VesselRow, CausalEffectRow } from "../lib/duckdb";
 import { tierColor, HANDOFF_STATES, handoffLabel } from "../lib/reviews";
 import type { DecisionTier, HandoffState } from "../lib/reviews";
 
@@ -15,6 +15,7 @@ interface Props {
   onClaim?: (mmsi: string) => void;
   exportRegion?: string;
   scoreHistory?: Map<string, number[]>;
+  causalEffects?: Map<string, CausalEffectRow>;
 }
 
 // ── Sparkline ────────────────────────────────────────────────────────────────
@@ -57,6 +58,36 @@ function Sparkline({ scores }: { scores: number[] }) {
           fill={color}
         />
       </svg>
+    </span>
+  );
+}
+
+// ── ATT badge ─────────────────────────────────────────────────────────────────
+
+export function attColor(att: number, significant: boolean): string {
+  if (!significant) return "#4a5568";
+  if (att >= 0.3) return "#fc8181";
+  if (att >= 0.1) return "#f6ad55";
+  return "#68d391";
+}
+
+function AttBadge({ causal }: { causal: CausalEffectRow }) {
+  const sign = causal.att_estimate >= 0 ? "+" : "";
+  const color = attColor(causal.att_estimate, causal.is_significant);
+  const label = `ATT ${sign}${causal.att_estimate.toFixed(2)}${causal.is_significant ? "*" : ""}`;
+  const title = `ATT ${sign}${causal.att_estimate.toFixed(3)} [${causal.att_ci_lower.toFixed(3)}, ${causal.att_ci_upper.toFixed(3)}] p=${causal.p_value.toFixed(4)} · regime: ${causal.regime}`;
+  return (
+    <span
+      title={title}
+      style={{
+        fontFamily: "ui-monospace,monospace",
+        fontSize: "0.58rem",
+        color,
+        marginLeft: "0.25rem",
+        flexShrink: 0,
+      }}
+    >
+      {label}
     </span>
   );
 }
@@ -166,6 +197,7 @@ export default function WatchlistTable({
   onClaim,
   exportRegion = "all",
   scoreHistory,
+  causalEffects,
 }: Props) {
   const [search, setSearch] = useState("");
   const [hovered, setHovered] = useState<string | null>(null);
@@ -415,8 +447,13 @@ export default function WatchlistTable({
                   >
                     {v.vessel_type || "—"}
                   </td>
-                  <td style={{ padding: "0.35rem 0.5rem", fontWeight: 700, color: confidenceColor(v.confidence) }}>
-                    {v.confidence.toFixed(3)}
+                  <td style={{ padding: "0.35rem 0.5rem", fontWeight: 700, color: confidenceColor(v.confidence), whiteSpace: "nowrap" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center" }}>
+                      <span>{v.confidence.toFixed(3)}</span>
+                      {causalEffects?.has(v.mmsi) && (
+                        <AttBadge causal={causalEffects.get(v.mmsi)!} />
+                      )}
+                    </span>
                   </td>
                   <td style={{ padding: "0.2rem 0.5rem", color: "#718096", whiteSpace: "nowrap" }}>
                     {onClaim && hovered === v.mmsi ? (
