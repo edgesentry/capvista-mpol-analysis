@@ -29,16 +29,26 @@ function Kpi({ label, value }: { label: string; value: string }) {
   );
 }
 
-export default function KpiBar({ vessels, metrics, unreadAlerts = 0, onBellClick }: Props) {
+export function deriveVesselKpis(vessels: VesselRow[]) {
   const total = vessels.length;
   const high = vessels.filter((v) => v.confidence >= 0.75).length;
   const avg =
     total > 0
       ? (vessels.reduce((s, v) => s + v.confidence, 0) / total).toFixed(3)
       : "—";
+  return { total, high, avg };
+}
 
-  const p50 = metrics?.precision_at_50 ?? metrics?.backtest_summary_p_at_50 ?? null;
-  const auroc = metrics?.auroc ?? metrics?.backtest_summary_auroc ?? null;
+export function deriveMetricKpis(metrics: MetricsRow | null) {
+  return {
+    p50: metrics?.precision_at_50 ?? metrics?.backtest_summary_p_at_50 ?? null,
+    auroc: metrics?.auroc ?? metrics?.backtest_summary_auroc ?? null,
+  };
+}
+
+export default function KpiBar({ vessels, metrics, unreadAlerts = 0, onBellClick }: Props) {
+  const { total, high, avg } = deriveVesselKpis(vessels);
+  const { p50, auroc } = deriveMetricKpis(metrics);
 
   return (
     <div

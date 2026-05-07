@@ -1,6 +1,9 @@
 # AGENTS
 
-Shadow fleet candidate screening application. Consumes edgesentry-rs primitives and indago data; domain-specific business logic lives here.
+Shadow fleet analyst dashboard and screening pipeline. arktrace is the end-user product — maritime analysts use it to triage vessels, generate patrol briefs, and hand off to enforcement. Pipeline maintainers use indago (see [indago](https://github.com/edgesentry/indago)) to monitor data health and R2 sync.
+
+**Analyst product:** [arktrace.edgesentry.io](https://arktrace.edgesentry.io) — watchlist, SHAP attribution, vessel detail, review workflow.  
+**Maintainer ops:** [indago pipeline dashboard](https://github.com/edgesentry/indago/tree/main/dashboard) — AIS ingestion health, R2 sync status, regression gate.
 
 ## External dependency map
 
