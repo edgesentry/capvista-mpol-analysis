@@ -11,7 +11,8 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { initDuckDB, queryWatchlist, queryMetrics, queryRegions, queryScoreHistoryBulk, queryStatelessVessels } from "./lib/duckdb";
+import { initDuckDB, queryWatchlist, queryMetrics, queryRegions, queryScoreHistoryBulk, queryStatelessVessels, queryAllCausalEffects } from "./lib/duckdb";
+import type { CausalEffectRow } from "./lib/duckdb";
 import { initReviewSchema, getBulkReviewStates, saveReview } from "./lib/reviews";
 import { initBriefCache } from "./lib/briefCache";
 import { initInvestigationStore } from "./lib/investigationStore";
@@ -57,6 +58,7 @@ export default function App() {
   const [reviewStates, setReviewStates] = useState<Map<string, { decision_tier: DecisionTier | null; handoff_state: HandoffState }>>(new Map());
   const [handoffFilter, setHandoffFilter] = useState<HandoffState | "all">("all");
   const [scoreHistory, setScoreHistory] = useState<Map<string, number[]>>(new Map());
+  const [causalEffects, setCausalEffects] = useState<Map<string, CausalEffectRow>>(new Map());
   const [alerts, setAlerts] = useState<AlertEntry[]>(() => loadAlerts());
   const [alertDrawerOpen, setAlertDrawerOpen] = useState(false);
   const prevVesselsRef = useRef<VesselRow[]>([]);
@@ -118,14 +120,16 @@ export default function App() {
   const refreshQuery = useCallback(async () => {
     const conn = connRef.current;
     if (!conn) return;
-    const [vs, m, rs, sh, sl] = await Promise.all([
+    const [vs, m, rs, sh, sl, ce] = await Promise.all([
       queryWatchlist(conn, { minConfidence, regions: selectedRegions.length > 0 ? selectedRegions : undefined }),
       queryMetrics(conn),
       queryRegions(conn),
       queryScoreHistoryBulk(conn),
       queryStatelessVessels(conn),
+      queryAllCausalEffects(conn),
     ]);
     setScoreHistory(sh);
+    setCausalEffects(ce);
     const updatedAlerts = diffAndAppend(prevVesselsRef.current, vs);
     prevVesselsRef.current = vs;
     setAlerts(updatedAlerts);
@@ -335,6 +339,7 @@ export default function App() {
             onClaim={handleClaim}
             exportRegion={selectedRegions.join("_") || "all"}
             scoreHistory={scoreHistory}
+            causalEffects={causalEffects}
           />
         </div>
 

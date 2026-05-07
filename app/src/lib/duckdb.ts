@@ -202,6 +202,25 @@ export async function queryCausalEffect(
   }
 }
 
+/** Load causal ATT for all vessels in one query. Returns mmsi → CausalEffectRow map. */
+export async function queryAllCausalEffects(
+  conn: duckdb.AsyncDuckDBConnection
+): Promise<Map<string, CausalEffectRow>> {
+  const map = new Map<string, CausalEffectRow>();
+  if (!isParquetRegistered("causal_effects.parquet")) return map;
+  try {
+    const result = await conn.query(
+      `SELECT mmsi, regime, att_estimate, att_ci_lower, att_ci_upper, p_value, is_significant
+       FROM read_parquet('causal_effects.parquet')`
+    );
+    for (const row of result.toArray()) {
+      const r = row.toJSON() as CausalEffectRow;
+      map.set(r.mmsi, r);
+    }
+  } catch { /* table not yet synced */ }
+  return map;
+}
+
 /**
  * Load 30-day score history for all vessels in one query.
  * Returns a map of mmsi → array of 30 confidence values (oldest first).
