@@ -231,6 +231,20 @@ Triggers: weekly cron (Monday 02:00 UTC) and after every successful
 4. Push `demo.zip` (lightweight bundle for quick developer setup).
 5. Push `public_eval.duckdb` (OpenSanctions DB).
 
+### Production dashboard watchlist (indago)
+
+The live SPA at [arktrace.edgesentry.io](https://arktrace.edgesentry.io) loads **pre-scored** watchlists from `arktrace-public`, not generation zips:
+
+| Object | Purpose |
+|---|---|
+| `ducklake_manifest.json` | Manifest of `score/*_watchlist.parquet` paths (legacy filename; storage is plain Parquet) |
+| `score/candidate_watchlist.parquet` | Global ranked list |
+| `score/singapore_watchlist.parquet` (etc.) | Per-region slices |
+
+**Publish path:** [indago](https://github.com/edgesentry/indago) weekly `data-publish.yml` runs `uv run python scripts/sync_r2.py push-arktrace` after scoring. The arktrace repo’s `sync_r2.py push` is for **generation zips** and local dev artifacts only.
+
+Watchlist Parquet includes `ownership_chain` (JSON array of `{role, name, sanctions_distance}`) when the ownership graph has edges for that MMSI. If the column is missing on R2, republish from indago after merging the ownership-chain export fix.
+
 ### App user pull options
 
 ```bash

@@ -63,7 +63,7 @@ Position: <lat>°, <lon>°   ← omitted if null
 Anomaly confidence: <confidence>
 ```
 
-No SHAP signal values, ownership paths, or ATT coefficients are included in the user prompt at this stage — the brief is intentionally scoped to vessel-level summary. The full signal breakdown is displayed separately in the SHAP panel.
+No SHAP signal values, ownership paths, or ATT coefficients are included in the user prompt at this stage — the brief is intentionally scoped to vessel-level summary. The full signal breakdown is in the **Feature attribution** panel; ownership hops are in the separate **Ownership chain** panel (from the `ownership_chain` watchlist column), not in the LLM context block.
 
 ---
 

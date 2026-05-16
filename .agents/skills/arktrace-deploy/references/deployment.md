@@ -80,8 +80,10 @@ The named volume `arktrace-data` persists data across restarts.
 git clone https://github.com/edgesentry/arktrace && cd arktrace
 uv sync
 uv run python scripts/run_pipeline.py --region singapore --non-interactive
-uv run python scripts/sync_r2.py push   # publish artifacts to R2
+uv run python scripts/sync_r2.py push   # generation zips + demo bundle (local/CI dev path)
 ```
+
+**Production watchlists** (`score/*_watchlist.parquet`, `ducklake_manifest.json`, `ownership_chain` column) are published from **[indago](https://github.com/edgesentry/indago)** via `scripts/sync_r2.py push-arktrace` in the weekly `data-publish` workflow — not from arktrace `push`.
 
 See [development.md](development.md) for the full list of pipeline steps.
 
