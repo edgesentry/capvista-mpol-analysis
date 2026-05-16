@@ -5,6 +5,7 @@ import {
   parseSignals,
   formatSanctionsDistance,
   ownershipRelationLabel,
+  ownershipChainEmptyMessage,
 } from "./vesselDetailUtils";
 
 describe("parseSignals", () => {
@@ -69,5 +70,13 @@ describe("ownershipRelationLabel", () => {
     expect(ownershipRelationLabel("operator", "company")).toBe("Operator");
     expect(ownershipRelationLabel("controlled_by", "company")).toBe("Parent company");
     expect(ownershipRelationLabel(undefined, "sanction")).toBe("Sanctions listing");
+  });
+});
+
+describe("ownershipChainEmptyMessage", () => {
+  it("explains registry-only sanctions when distance is zero", () => {
+    expect(ownershipChainEmptyMessage(0)).toContain("sanctions registry");
+    expect(ownershipChainEmptyMessage(99)).toContain("No ownership records");
+    expect(ownershipChainEmptyMessage(1)).toContain("no operator or owner path");
   });
 });
