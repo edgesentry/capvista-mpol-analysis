@@ -9,10 +9,17 @@ import {
   formatLastSeen,
   confidenceTier,
   confidenceTierColor,
+} from "../lib/humanise";
+import {
+  normalizeAttributions,
+  parseOwnershipChain,
+  parseSignals,
+  formatSanctionsDistance,
+  ownershipRelationLabel,
   signalLabel,
   signalSeverity,
   severityColor,
-} from "../lib/humanise";
+} from "../lib/vesselDetailUtils";
 import ReviewPanel from "./ReviewPanel";
 import DispatchModal from "./DispatchModal";
 import InvestigationPanel from "./InvestigationPanel";
@@ -98,30 +105,12 @@ async function fetchBrief(v: VesselRow, signal: AbortSignal): Promise<string> {
 
 // ── SHAP signal bar chart ────────────────────────────────────────────────────
 
-interface ShapSignal {
-  feature: string;
-  value: number | string | null;
-  contribution: number;
-}
-
-function parseSignals(raw: string | null | undefined): ShapSignal[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed as ShapSignal[];
-  } catch {
-    return [];
-  }
-}
-
-function ShapBarChart({ raw }: { raw: string | null | undefined }) {
-  const signals = parseSignals(raw);
-  if (!signals.length) return null;
-  const maxContrib = Math.max(...signals.map((s) => s.contribution));
+function FeatureAttributionChart({ raw }: { raw: string | null | undefined }) {
+  const rows = normalizeAttributions(parseSignals(raw));
+  if (!rows.length) return null;
 
   return (
-    <div style={{ marginTop: "0.75rem" }}>
+    <div style={{ marginTop: "0.75rem" }} data-testid="feature-attribution">
       <div
         style={{
           fontSize: "0.65rem",
@@ -131,10 +120,10 @@ function ShapBarChart({ raw }: { raw: string | null | undefined }) {
           marginBottom: "0.4rem",
         }}
       >
-        Top signals
+        Feature attribution
       </div>
-      {signals.map((s) => {
-        const pct = maxContrib > 0 ? (s.contribution / maxContrib) * 100 : 0;
+      {rows.map((s) => {
+        const pct = s.sharePct;
         const label = signalLabel(s.feature);
         const rawVal = s.value != null ? String(s.value) : "—";
         const sev = signalSeverity(s.feature, s.value);
@@ -158,16 +147,90 @@ function ShapBarChart({ raw }: { raw: string | null | undefined }) {
               </span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
-              <div style={{ flex: 1, background: "#1a1f2e", borderRadius: 2, height: 5, minWidth: 0 }}>
+              <div style={{ flex: 1, background: "#1a1f2e", borderRadius: 2, height: 6, minWidth: 0 }}>
                 <div style={{ width: `${pct}%`, background: sev ? severityColor(sev) : "#fc8181", height: "100%", borderRadius: 2 }} />
               </div>
-              <span style={{ fontSize: "0.6rem", color: "#4a5568", minWidth: 24, textAlign: "right", fontFamily: "ui-monospace,monospace" }}>
-                {(s.contribution * 100).toFixed(0)}%
+              <span style={{ fontSize: "0.6rem", color: "#cbd5e0", minWidth: 32, textAlign: "right", fontFamily: "ui-monospace,monospace" }}>
+                {pct.toFixed(0)}%
               </span>
             </div>
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function OwnershipChainPanel({
+  chainRaw,
+  sanctionsDistance,
+  vesselName,
+  mmsi,
+}: {
+  chainRaw: string | null | undefined;
+  sanctionsDistance: number | null | undefined;
+  vesselName: string;
+  mmsi: string;
+}) {
+  const chain = parseOwnershipChain(chainRaw);
+  const hasChain = chain.length > 1 || (chain.length === 1 && chain[0]?.sanctioned);
+
+  return (
+    <div style={{ marginTop: "0.75rem" }} data-testid="ownership-chain">
+      <div
+        style={{
+          fontSize: "0.65rem",
+          textTransform: "uppercase",
+          letterSpacing: "0.08em",
+          color: "#4a5568",
+          marginBottom: "0.4rem",
+        }}
+      >
+        Ownership chain
+      </div>
+      {sanctionsDistance != null && (
+        <div style={{ fontSize: "0.68rem", color: "#718096", marginBottom: "0.45rem" }}>
+          {formatSanctionsDistance(sanctionsDistance)}
+        </div>
+      )}
+      {!hasChain ? (
+        <div style={{ fontSize: "0.68rem", color: "#4a5568", fontStyle: "italic" }}>
+          No ownership records in graph for this vessel.
+        </div>
+      ) : (
+        <div style={{ fontSize: "0.72rem", color: "#cbd5e0", lineHeight: 1.55 }}>
+          {chain.map((hop, idx) => {
+            const indent = idx * 14;
+            const isRoot = idx === 0;
+            const prefix = isRoot ? "" : "└── ";
+            const rel = ownershipRelationLabel(hop.relation, hop.kind);
+            const country = hop.country ? ` (${hop.country})` : "";
+            const sanctioned = hop.sanctioned || hop.kind === "sanction";
+            const displayName = isRoot
+              ? `${hop.name || vesselName} (MMSI ${mmsi})`
+              : `${rel}: ${hop.name}${country}`;
+            return (
+              <div
+                key={`${hop.hop}-${hop.name}-${idx}`}
+                style={{
+                  marginLeft: indent,
+                  marginBottom: idx < chain.length - 1 ? "0.2rem" : 0,
+                  color: sanctioned ? "#fc8181" : "#cbd5e0",
+                }}
+              >
+                <span style={{ color: "#4a5568" }}>{prefix}</span>
+                {displayName}
+                {sanctioned && hop.kind !== "sanction" && (
+                  <span style={{ marginLeft: "0.35rem", fontSize: "0.6rem", fontWeight: 700 }}>⚠ SANCTIONED</span>
+                )}
+                {hop.kind === "sanction" && (
+                  <span style={{ marginLeft: "0.35rem", fontSize: "0.6rem", fontWeight: 700 }}>→ listing</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -581,7 +644,13 @@ export default function VesselDetail({ vessel, conn, onClose, onReviewSaved }: P
       </div>
 
       {/* SHAP bar chart */}
-      <ShapBarChart raw={vessel.top_signals} />
+      <FeatureAttributionChart raw={vessel.top_signals} />
+      <OwnershipChainPanel
+        chainRaw={vessel.ownership_chain}
+        sanctionsDistance={vessel.sanctions_distance}
+        vesselName={vessel.vessel_name || vessel.mmsi}
+        mmsi={vessel.mmsi}
+      />
 
       {/* OSINT investigation panel */}
       {investigateOpen && (

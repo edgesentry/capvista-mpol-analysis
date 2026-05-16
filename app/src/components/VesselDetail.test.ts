@@ -40,6 +40,8 @@ const BASE_VESSEL: VesselRow = {
   top_signals: null,
   ais_gap_count_30d: null,
   sts_candidate_count: null,
+  sanctions_distance: null,
+  ownership_chain: null,
 };
 
 // ── SYSTEM_PROMPT constraints ────────────────────────────────────────────────

@@ -586,6 +586,18 @@ def compute_composite_scores(
                 f"[label propagation] floor applied to {n_lifted} vessels from {propagation_path}"
             )
 
+    graph_export = feature_df.select(["mmsi", "sanctions_distance"])
+    scored = scored.join(graph_export, on="mmsi", how="left")
+
+    try:
+        from pipeline.src.features.ownership_graph import compute_ownership_chains
+
+        chains_df = compute_ownership_chains(db_path)
+        scored = scored.join(chains_df, on="mmsi", how="left")
+    except Exception as exc:
+        print(f"Warning: ownership_chain export skipped ({exc})")
+        scored = scored.with_columns(pl.lit(None, dtype=pl.Utf8).alias("ownership_chain"))
+
     return scored.select(
         [
             "mmsi",
@@ -609,6 +621,7 @@ def compute_composite_scores(
             "name_changes_2y",
             "owner_changes_2y",
             "sanctions_distance",
+            "ownership_chain",
             "shared_address_centrality",
             "sts_hub_degree",
             "cluster_label",
