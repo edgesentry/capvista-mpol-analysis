@@ -20,7 +20,7 @@
 cd app && npm install && npm run dev   # http://localhost:5173
 ```
 
-Select a region → watchlist loads → click any vessel → SHAP breakdown and AIS track appear.
+Select a region → watchlist loads → click any vessel → feature attribution, ownership chain, and AIS track appear.
 
 Demo data (no pipeline required):
 
