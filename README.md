@@ -39,7 +39,7 @@ arktrace applies Difference-in-Differences (DiD) causal modelling to identify ve
 |---|---|---|
 | Unit of evaluation | A point — "does this vessel look unusual?" | A line — "did behaviour change *because of* a sanctions event?" |
 | False positive driver | Any vessel that deviates | Only vessels whose deviation is statistically linked to a trigger |
-| Lead time | Reactive | 60–90 days pre-designation |
+| Lead time | Reactive | Pre-designation (see [indago dashboard](https://indago.edgesentry.io) / [C1 validation](https://github.com/edgesentry/edgesentry-commercial/blob/main/docs/programs/202606-capvista-ai-joint-challenge/submission/c1-validation-results.md)) |
 | Output | Score + threshold | ATT ± 95% CI, p-value, SHAP signal breakdown |
 
 Scoring is fully deterministic — no LLM in the pipeline. The browser generates patrol briefs via a local LLM with strict grounding constraints; the LLM cannot modify scores. See [docs/ref-llm-grounding.md](docs/ref-llm-grounding.md).
