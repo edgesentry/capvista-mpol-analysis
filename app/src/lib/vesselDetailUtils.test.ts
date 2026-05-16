@@ -4,6 +4,7 @@ import {
   parseOwnershipChain,
   parseSignals,
   formatSanctionsDistance,
+  ownershipRelationLabel,
 } from "./vesselDetailUtils";
 
 describe("parseSignals", () => {
@@ -59,5 +60,14 @@ describe("formatSanctionsDistance", () => {
     expect(formatSanctionsDistance(0)).toContain("Directly");
     expect(formatSanctionsDistance(1)).toContain("1 hop");
     expect(formatSanctionsDistance(99)).toContain("No sanctions");
+  });
+});
+
+describe("ownershipRelationLabel", () => {
+  it("maps hop kinds and relations to display labels", () => {
+    expect(ownershipRelationLabel(undefined, "vessel")).toBe("Vessel");
+    expect(ownershipRelationLabel("operator", "company")).toBe("Operator");
+    expect(ownershipRelationLabel("controlled_by", "company")).toBe("Parent company");
+    expect(ownershipRelationLabel(undefined, "sanction")).toBe("Sanctions listing");
   });
 });
