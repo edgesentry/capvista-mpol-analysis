@@ -3,11 +3,11 @@ Tests for ownership graph feature engineering — focusing on the DuckDB sanctio
 fallback introduced in issue #231 and the STS hub degree fixes in issue #233.
 """
 
+import json
+
 import duckdb
 import polars as pl
 import pyarrow as pa
-
-import json
 
 from pipeline.src.features.ownership_graph import (
     MAX_HOPS,
