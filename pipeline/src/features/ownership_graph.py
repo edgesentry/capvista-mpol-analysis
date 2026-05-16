@@ -11,6 +11,9 @@ Usage:
     uv run python src/features/ownership_graph.py
 """
 
+from __future__ import annotations
+
+import json
 import os
 
 import duckdb
@@ -296,6 +299,140 @@ def _apply_direct_sanctions_fallback(sd_df: pl.DataFrame, db_path: str) -> pl.Da
         .otherwise(pl.col("sanctions_distance"))
         .alias("sanctions_distance")
     )
+
+
+# ---------------------------------------------------------------------------
+# Ownership chain materialization (dashboard export)
+# ---------------------------------------------------------------------------
+
+
+def _company_display(
+    company_id: str,
+    companies: pl.DataFrame,
+    sanctioned_ids: set[str],
+) -> tuple[str, str, bool]:
+    if len(companies):
+        row = companies.filter(pl.col("id") == company_id)
+        if len(row):
+            name = row["name"][0]
+            country = row["country"][0]
+            return (
+                str(name) if name else company_id,
+                str(country) if country else "",
+                company_id in sanctioned_ids,
+            )
+    return company_id, "", company_id in sanctioned_ids
+
+
+def _build_vessel_ownership_chain(mmsi: str, tables: dict) -> list[dict]:
+    """Return a short vessel → operator → parent → sanctions path for one MMSI."""
+    vessels = pl.from_arrow(tables["Vessel"])
+    ob = pl.from_arrow(tables["OWNED_BY"])
+    mb = pl.from_arrow(tables["MANAGED_BY"])
+    cb = pl.from_arrow(tables["CONTROLLED_BY"])
+    sb = pl.from_arrow(tables["SANCTIONED_BY"])
+
+    sanctioned_ids: set[str] = set(sb["src_id"].to_list()) if len(sb) else set()
+    company_df = (
+        pl.from_arrow(tables["Company"])
+        if len(tables["Company"])
+        else pl.DataFrame(schema={"id": pl.Utf8, "name": pl.Utf8, "country": pl.Utf8})
+    )
+
+    vrow = vessels.filter(pl.col("mmsi") == mmsi)
+    vessel_name = str(vrow["name"][0]) if len(vrow) and vrow["name"][0] else mmsi
+    chain: list[dict] = [
+        {
+            "hop": 0,
+            "kind": "vessel",
+            "name": vessel_name,
+            "country": "",
+            "sanctioned": mmsi in sanctioned_ids,
+            "relation": "vessel",
+        }
+    ]
+
+    company_id: str | None = None
+    relation: str | None = None
+    if len(ob):
+        owned = ob.filter(pl.col("src_id") == mmsi)
+        if len(owned):
+            company_id = owned["dst_id"][0]
+            relation = "operator"
+    if company_id is None and len(mb):
+        managed = mb.filter(pl.col("src_id") == mmsi)
+        if len(managed):
+            company_id = managed["dst_id"][0]
+            relation = "manager"
+
+    if not company_id:
+        return chain
+
+    name, country, sanctioned = _company_display(company_id, company_df, sanctioned_ids)
+    chain.append(
+        {
+            "hop": 1,
+            "kind": "company",
+            "name": name,
+            "country": country,
+            "sanctioned": sanctioned,
+            "relation": relation or "operator",
+        }
+    )
+
+    target_id = company_id
+    if len(cb):
+        parents = cb.filter(pl.col("src_id") == company_id)
+        if len(parents):
+            parent_id = parents["dst_id"][0]
+            pname, pcountry, psanc = _company_display(parent_id, company_df, sanctioned_ids)
+            chain.append(
+                {
+                    "hop": 2,
+                    "kind": "company",
+                    "name": pname,
+                    "country": pcountry,
+                    "sanctioned": psanc,
+                    "relation": "controlled_by",
+                }
+            )
+            target_id = parent_id
+
+    if len(sb):
+        listings = sb.filter(pl.col("src_id") == target_id)
+        for listing in listings.to_dicts():
+            list_name = listing.get("list") or "Sanctions list"
+            date = listing.get("date") or ""
+            label = f"{list_name}" + (f" ({date})" if date else "")
+            chain.append(
+                {
+                    "hop": len(chain),
+                    "kind": "sanction",
+                    "name": label,
+                    "country": "",
+                    "sanctioned": True,
+                    "relation": "sanctioned_by",
+                    "date": date,
+                }
+            )
+            break
+
+    return chain
+
+
+def compute_ownership_chains(db_path: str) -> pl.DataFrame:
+    """Materialize ownership paths for dashboard export (one JSON array per MMSI)."""
+    tables = load_tables(db_path)
+    vessels = pl.from_arrow(tables["Vessel"]).select("mmsi")
+    if len(vessels) == 0:
+        return pl.DataFrame(schema={"mmsi": pl.Utf8, "ownership_chain": pl.Utf8})
+
+    rows = []
+    for mmsi in vessels["mmsi"].to_list():
+        chain = _build_vessel_ownership_chain(mmsi, tables)
+        rows.append({"mmsi": mmsi, "ownership_chain": json.dumps(chain)})
+
+    return pl.DataFrame(rows, schema={"mmsi": pl.Utf8, "ownership_chain": pl.Utf8})
 
 
 # ---------------------------------------------------------------------------

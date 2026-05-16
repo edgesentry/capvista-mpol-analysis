@@ -38,6 +38,8 @@ const BASE: VesselRow = {
   ]),
   ais_gap_count_30d: 5,
   sts_candidate_count: 100,
+  sanctions_distance: 1,
+  ownership_chain: null,
 };
 
 // ── System prompt constraints ─────────────────────────────────────────────────

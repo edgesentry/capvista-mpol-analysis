@@ -3,6 +3,8 @@ Tests for ownership graph feature engineering — focusing on the DuckDB sanctio
 fallback introduced in issue #231 and the STS hub degree fixes in issue #233.
 """
 
+import json
+
 import duckdb
 import polars as pl
 import pyarrow as pa
@@ -10,6 +12,7 @@ import pyarrow as pa
 from pipeline.src.features.ownership_graph import (
     MAX_HOPS,
     _apply_direct_sanctions_fallback,
+    _build_vessel_ownership_chain,
     _compute_sts_hub_degree,
 )
 from pipeline.src.graph.store import NODE_SCHEMAS, REL_SCHEMAS
@@ -185,3 +188,111 @@ def test_sts_hub_degree_hub_vessel():
     )
     result = _compute_sts_hub_degree(tables)
     assert result.filter(pl.col("mmsi") == "111111111")["sts_hub_degree"][0] == 3
+
+
+# ---------------------------------------------------------------------------
+# _build_vessel_ownership_chain
+# ---------------------------------------------------------------------------
+
+
+def _empty_rel(name: str) -> pa.Table:
+    return REL_SCHEMAS[name].empty_table()
+
+
+def _make_chain_tables(
+    *,
+    mmsi: str = "111111111",
+    vessel_name: str = "ADMIRAL STAR",
+    use_manager: bool = False,
+    with_parent: bool = True,
+    with_sanction: bool = True,
+) -> dict:
+    """Minimal Lance-style tables for ownership chain materialization."""
+    vessel_table = pa.table(
+        {"mmsi": [mmsi], "imo": [""], "name": [vessel_name]},
+        schema=NODE_SCHEMAS["Vessel"],
+    )
+    company_table = pa.table(
+        {
+            "id": ["co-op", "co-parent"],
+            "name": ["Seawind Ltd", "Oceanic Holdings"],
+            "country": ["PA", "VG"],
+        },
+        schema=NODE_SCHEMAS["Company"],
+    )
+    owned_by = _empty_rel("OWNED_BY")
+    managed_by = _empty_rel("MANAGED_BY")
+    if use_manager:
+        managed_by = pa.table(
+            {"src_id": [mmsi], "dst_id": ["co-op"], "since": [""], "until": [""]},
+            schema=REL_SCHEMAS["MANAGED_BY"],
+        )
+    else:
+        owned_by = pa.table(
+            {"src_id": [mmsi], "dst_id": ["co-op"], "since": [""], "until": [""]},
+            schema=REL_SCHEMAS["OWNED_BY"],
+        )
+
+    controlled_by = _empty_rel("CONTROLLED_BY")
+    if with_parent:
+        controlled_by = pa.table(
+            {"src_id": ["co-op"], "dst_id": ["co-parent"]},
+            schema=REL_SCHEMAS["CONTROLLED_BY"],
+        )
+
+    sanctioned_by = _empty_rel("SANCTIONED_BY")
+    if with_sanction:
+        sanctioned_by = pa.table(
+            {
+                "src_id": ["co-parent"],
+                "dst_id": ["OFAC SDN"],
+                "list": ["OFAC SDN"],
+                "date": ["2024-11-12"],
+            },
+            schema=REL_SCHEMAS["SANCTIONED_BY"],
+        )
+
+    return {
+        "Vessel": vessel_table,
+        "Company": company_table,
+        "OWNED_BY": owned_by,
+        "MANAGED_BY": managed_by,
+        "CONTROLLED_BY": controlled_by,
+        "SANCTIONED_BY": sanctioned_by,
+    }
+
+
+def test_ownership_chain_vessel_only():
+    tables = _make_chain_tables(with_parent=False, with_sanction=False)
+    tables["OWNED_BY"] = _empty_rel("OWNED_BY")
+    chain = _build_vessel_ownership_chain("111111111", tables)
+    assert len(chain) == 1
+    assert chain[0]["kind"] == "vessel"
+    assert chain[0]["name"] == "ADMIRAL STAR"
+
+
+def test_ownership_chain_operator_parent_and_listing():
+    chain = _build_vessel_ownership_chain("111111111", _make_chain_tables())
+    assert [h["kind"] for h in chain] == ["vessel", "company", "company", "sanction"]
+    assert chain[1]["relation"] == "operator"
+    assert chain[1]["name"] == "Seawind Ltd"
+    assert chain[2]["relation"] == "controlled_by"
+    assert chain[3]["kind"] == "sanction"
+    assert "OFAC SDN" in chain[3]["name"]
+
+
+def test_ownership_chain_uses_manager_when_no_owner():
+    chain = _build_vessel_ownership_chain(
+        "111111111",
+        _make_chain_tables(use_manager=True, with_parent=False, with_sanction=False),
+    )
+    assert len(chain) == 2
+    assert chain[1]["relation"] == "manager"
+    assert chain[1]["name"] == "Seawind Ltd"
+
+
+def test_ownership_chain_json_roundtrip_shape():
+    chain = _build_vessel_ownership_chain("111111111", _make_chain_tables())
+    parsed = json.loads(json.dumps(chain))
+    assert parsed[0]["hop"] == 0
+    assert parsed[-1]["kind"] == "sanction"

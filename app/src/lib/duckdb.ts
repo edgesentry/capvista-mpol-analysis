@@ -86,6 +86,8 @@ export interface VesselRow {
   top_signals: string | null;
   ais_gap_count_30d: number | null;
   sts_candidate_count: number | null;
+  sanctions_distance: number | null;
+  ownership_chain: string | null;
 }
 
 export interface MetricsRow {
@@ -116,12 +118,15 @@ export async function queryWatchlist(
   opts: { minConfidence?: number; regions?: string[] } = {}
 ): Promise<VesselRow[]> {
   const { minConfidence = 0, regions } = opts;
-  const [hasImo, hasRegion, hasTopSignals, hasAisGap, hasSts] = await Promise.all([
+  const [hasImo, hasRegion, hasTopSignals, hasAisGap, hasSts, hasSanctionsDist, hasOwnershipChain] =
+    await Promise.all([
     watchlistHasCol(conn, "imo"),
     watchlistHasCol(conn, "region"),
     watchlistHasCol(conn, "top_signals"),
     watchlistHasCol(conn, "ais_gap_count_30d"),
     watchlistHasCol(conn, "sts_candidate_count"),
+    watchlistHasCol(conn, "sanctions_distance"),
+    watchlistHasCol(conn, "ownership_chain"),
   ]);
 
   let sql = `
@@ -138,7 +143,9 @@ export async function queryWatchlist(
       ${hasRegion ? "region" : "NULL AS region"},
       ${hasTopSignals ? "CAST(top_signals AS VARCHAR) AS top_signals" : "NULL AS top_signals"},
       ${hasAisGap ? "CAST(ais_gap_count_30d AS INTEGER) AS ais_gap_count_30d" : "NULL AS ais_gap_count_30d"},
-      ${hasSts ? "CAST(sts_candidate_count AS INTEGER) AS sts_candidate_count" : "NULL AS sts_candidate_count"}
+      ${hasSts ? "CAST(sts_candidate_count AS INTEGER) AS sts_candidate_count" : "NULL AS sts_candidate_count"},
+      ${hasSanctionsDist ? "CAST(sanctions_distance AS INTEGER) AS sanctions_distance" : "NULL AS sanctions_distance"},
+      ${hasOwnershipChain ? "CAST(ownership_chain AS VARCHAR) AS ownership_chain" : "NULL AS ownership_chain"}
     FROM read_parquet('watchlist.parquet')
     WHERE confidence >= ${minConfidence}
   `;
@@ -291,12 +298,15 @@ const ALLOCATED_MIDS = new Set([
 export async function queryStatelessVessels(
   conn: duckdb.AsyncDuckDBConnection
 ): Promise<VesselRow[]> {
-  const [hasImo, hasRegion, hasTopSignals, hasAisGap, hasSts] = await Promise.all([
+  const [hasImo, hasRegion, hasTopSignals, hasAisGap, hasSts, hasSanctionsDist, hasOwnershipChain] =
+    await Promise.all([
     watchlistHasCol(conn, "imo"),
     watchlistHasCol(conn, "region"),
     watchlistHasCol(conn, "top_signals"),
     watchlistHasCol(conn, "ais_gap_count_30d"),
     watchlistHasCol(conn, "sts_candidate_count"),
+    watchlistHasCol(conn, "sanctions_distance"),
+    watchlistHasCol(conn, "ownership_chain"),
   ]);
 
   // Use string comparison to avoid TRY_CAST compatibility issues with DuckDB-WASM.
@@ -316,7 +326,9 @@ export async function queryStatelessVessels(
       ${hasRegion ? "region" : "NULL AS region"},
       ${hasTopSignals ? "CAST(top_signals AS VARCHAR) AS top_signals" : "NULL AS top_signals"},
       ${hasAisGap ? "CAST(ais_gap_count_30d AS INTEGER) AS ais_gap_count_30d" : "NULL AS ais_gap_count_30d"},
-      ${hasSts ? "CAST(sts_candidate_count AS INTEGER) AS sts_candidate_count" : "NULL AS sts_candidate_count"}
+      ${hasSts ? "CAST(sts_candidate_count AS INTEGER) AS sts_candidate_count" : "NULL AS sts_candidate_count"},
+      ${hasSanctionsDist ? "CAST(sanctions_distance AS INTEGER) AS sanctions_distance" : "NULL AS sanctions_distance"},
+      ${hasOwnershipChain ? "CAST(ownership_chain AS VARCHAR) AS ownership_chain" : "NULL AS ownership_chain"}
     FROM read_parquet('watchlist.parquet')
     WHERE LENGTH(mmsi) = 9
       AND LEFT(mmsi, 1) BETWEEN '2' AND '7'
