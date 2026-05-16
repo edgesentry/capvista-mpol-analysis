@@ -13,7 +13,9 @@ from pipeline.src.features.ownership_graph import (
     MAX_HOPS,
     _apply_direct_sanctions_fallback,
     _build_vessel_ownership_chain,
+    _chain_export_mmsis,
     _compute_sts_hub_degree,
+    _is_vessel_mmsi,
 )
 from pipeline.src.graph.store import NODE_SCHEMAS, REL_SCHEMAS
 
@@ -296,3 +298,51 @@ def test_ownership_chain_json_roundtrip_shape():
     parsed = json.loads(json.dumps(chain))
     assert parsed[0]["hop"] == 0
     assert parsed[-1]["kind"] == "sanction"
+
+
+def _make_direct_sanction_only_tables(mmsi: str = "273449240") -> dict:
+    """Vessel on SANCTIONED_BY but absent from Vessel node table (production gap)."""
+    return {
+        "Vessel": NODE_SCHEMAS["Vessel"].empty_table(),
+        "Company": NODE_SCHEMAS["Company"].empty_table(),
+        "OWNED_BY": _empty_rel("OWNED_BY"),
+        "MANAGED_BY": _empty_rel("MANAGED_BY"),
+        "CONTROLLED_BY": _empty_rel("CONTROLLED_BY"),
+        "SANCTIONED_BY": pa.table(
+            {
+                "src_id": [mmsi],
+                "dst_id": ["OFAC SDN"],
+                "list": ["OFAC SDN"],
+                "date": ["2024-11-12"],
+            },
+            schema=REL_SCHEMAS["SANCTIONED_BY"],
+        ),
+    }
+
+
+def test_is_vessel_mmsi():
+    assert _is_vessel_mmsi("273449240") is True
+    assert _is_vessel_mmsi("co-op") is False
+
+
+def test_chain_export_mmsis_includes_direct_sanction_without_vessel_node():
+    tables = _make_direct_sanction_only_tables()
+    assert "273449240" in _chain_export_mmsis(tables)
+    chain = _build_vessel_ownership_chain("273449240", tables)
+    assert len(chain) == 1
+    assert chain[0]["sanctioned"] is True
+    assert chain[0]["kind"] == "vessel"
+
+
+def test_chain_export_mmsis_excludes_company_sanctioned_by_src():
+    tables = _make_direct_sanction_only_tables()
+    tables["SANCTIONED_BY"] = pa.table(
+        {
+            "src_id": ["co-parent"],
+            "dst_id": ["OFAC SDN"],
+            "list": ["OFAC SDN"],
+            "date": [""],
+        },
+        schema=REL_SCHEMAS["SANCTIONED_BY"],
+    )
+    assert _chain_export_mmsis(tables) == []

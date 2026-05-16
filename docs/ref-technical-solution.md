@@ -103,7 +103,8 @@ The full stack runs on a single machine — a field laptop, a shipboard server, 
 │         │              Lance Graph (ownership network)          │
 │         │                      │                               │
 │         ▼                      ▼                               │
-│  Parquet artifacts  →  sync_r2.py push  →  arktrace-public (R2) │
+│  Parquet artifacts  →  indago push-arktrace  →  arktrace-public (R2) │
+│       (score/*_watchlist.parquet + ownership_chain)                 │
 └─────────────────────────────────────────────────────────────────┘
           │  browser fetches Parquet via manifest
           ▼
@@ -407,6 +408,7 @@ Arktrace uses the LLM for one task only: converting a deterministic, structured 
 | `name_changes_2y` | `i32` | Name changes in 2 years |
 | `owner_changes_2y` | `i32` | Ownership changes |
 | `sanctions_distance` | `i32` | BFS hops to nearest sanctioned entity |
+| `ownership_chain` | `str` (JSON) | Materialised owner/manager/sanctioned-entity hops for the dashboard Ownership chain panel |
 | `shared_address_centrality` | `i32` | Vessels sharing the same registered address in ownership chain |
 | `sts_hub_degree` | `i32` | Distinct vessels contacted in STS co-location events |
 

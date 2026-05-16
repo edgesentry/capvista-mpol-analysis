@@ -9,7 +9,7 @@
 ## What analysts get
 
 - **Ranked watchlist** — vessels scored by causal intent, not anomaly. Each entry shows confidence, region, AIS gap count, and STS transfer candidates.
-- **Vessel detail** — SHAP attribution panel showing which signals drove the score; AIS track; ownership graph path.
+- **Vessel detail** — Feature attribution (SHAP) and ownership chain panels; AIS track; sanctions graph distance.
 - **Patrol brief** — plain-language dispatch summary generated locally in the browser. No score or evidence leaves the site.
 - **Review workflow** — triage (Watch / Escalate / Dismiss), handoff status, and review history synced across sessions.
 - **Pre-designation lead time** — validates detections against known OFAC designation dates; typical lead: 60–90 days.

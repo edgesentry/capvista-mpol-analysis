@@ -79,6 +79,18 @@ export function formatSanctionsDistance(distance: number | null | undefined): st
   return `${distance} hops — parent company linked to sanctions list`;
 }
 
+export function ownershipChainEmptyMessage(
+  sanctionsDistance: number | null | undefined,
+): string {
+  if (sanctionsDistance === 0) {
+    return "Listed on sanctions registry. No operator or owner edges in the ownership graph for this MMSI.";
+  }
+  if (sanctionsDistance != null && sanctionsDistance < 99) {
+    return "Sanctions link in registry or graph, but no operator or owner path is recorded for this vessel.";
+  }
+  return "No ownership records in graph for this vessel.";
+}
+
 export function ownershipRelationLabel(relation: string | undefined, kind: string): string {
   if (kind === "vessel") return "Vessel";
   if (kind === "sanction") return "Sanctions listing";

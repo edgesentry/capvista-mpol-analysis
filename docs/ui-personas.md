@@ -94,7 +94,7 @@ This document defines the three primary arktrace user personas, maps their workf
 |---|---|---|
 | 1. Find vessel | Scrolls table to MMSI or filters by confidence | **High** — no name/IMO search |
 | 2. Read brief | Must open review panel, wait for LLM to stream | **Medium** — brief is gated behind review action |
-| 3. Check ownership | Chat panel → types query | **Low** — works well |
+| 3. Check ownership | Ownership chain panel in vessel detail; chat for follow-up | **Low** — structured hops when R2 publish includes `ownership_chain` |
 | 4. Understand causal badge | Hovers — no tooltip; consults docs | **High** — no in-context explanation |
 | 5. Assign tier | Opens review panel, fills form | **Low** — form is functional |
 | 6. Return next session | Reloads page, review state reloaded from API | **Low** — state persists in DB |

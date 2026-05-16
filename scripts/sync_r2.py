@@ -1980,8 +1980,9 @@ def main() -> int:
     push_ducklake_public_p = sub.add_parser(
         "push-ducklake-public",
         help=(
-            "Upload DuckLake catalog.duckdb + data/ Parquet files to arktrace-public/ "
-            "(run checkpoint_ducklake.py first)"
+            "Upload DuckLake catalog.duckdb + data/ Parquet (Phase 1 gate / legacy). "
+            "Production arktrace dashboard is served from indago: "
+            "sync_r2.py push-arktrace → score/*.parquet + manifest.json"
         ),
     )
     push_ducklake_public_p.add_argument(

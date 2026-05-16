@@ -420,15 +420,41 @@ def _build_vessel_ownership_chain(mmsi: str, tables: dict) -> list[dict]:
     return chain
 
 
+def _is_vessel_mmsi(value: str) -> bool:
+    """True when value looks like a 9-digit AIS MMSI (not a company node id)."""
+    return len(value) == 9 and value.isdigit()
+
+
+def _chain_export_mmsis(tables: dict) -> list[str]:
+    """MMSIs to materialize: graph vessels plus any with ownership/sanctions edges."""
+    mmsis: set[str] = set()
+    vessels = pl.from_arrow(tables["Vessel"])
+    if len(vessels):
+        mmsis.update(vessels["mmsi"].to_list())
+
+    for rel in ("OWNED_BY", "MANAGED_BY"):
+        edges = pl.from_arrow(tables[rel])
+        if len(edges):
+            mmsis.update(edges["src_id"].to_list())
+
+    sb = pl.from_arrow(tables["SANCTIONED_BY"])
+    if len(sb):
+        for src_id in sb["src_id"].to_list():
+            if _is_vessel_mmsi(src_id):
+                mmsis.add(src_id)
+
+    return sorted(mmsis)
+
+
 def compute_ownership_chains(db_path: str) -> pl.DataFrame:
     """Materialize ownership paths for dashboard export (one JSON array per MMSI)."""
     tables = load_tables(db_path)
-    vessels = pl.from_arrow(tables["Vessel"]).select("mmsi")
-    if len(vessels) == 0:
+    mmsis = _chain_export_mmsis(tables)
+    if not mmsis:
         return pl.DataFrame(schema={"mmsi": pl.Utf8, "ownership_chain": pl.Utf8})
 
     rows = []
-    for mmsi in vessels["mmsi"].to_list():
+    for mmsi in mmsis:
         chain = _build_vessel_ownership_chain(mmsi, tables)
         rows.append({"mmsi": mmsi, "ownership_chain": json.dumps(chain)})
 

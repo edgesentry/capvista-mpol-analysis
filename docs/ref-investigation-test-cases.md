@@ -59,6 +59,7 @@ arktrace (analyst app)
 |---|---|
 | `confidence` score | Ranks vessels in the watchlist; drives triage priority |
 | `sanctions_distance` | Flags vessels with ownership proximity to sanctioned entities |
+| `ownership_chain` | JSON hop list for the Ownership chain panel (materialised at publish time in indago) |
 | `top_signals` (SHAP) | Displayed as signal bars; passed to LLM as investigation context |
 | `ais_gap_count_30d` | Key evasion indicator surfaced in triage step |
 | `sts_candidate_count` | STS event count surfaced in triage step |

@@ -18,6 +18,7 @@ Before modifying scoring logic or debugging unexpected scores, identify which la
 | Composite score unexpected | this repo scoring engine | `pipeline/src/score/composite.py` |
 | SHAP attribution wrong | this repo SHAP layer | `pipeline/src/score/composite.py` |
 | Parquet schema mismatch | indago → arktrace contract | `indago` R2 bucket schema; `pipeline/src/ingest/schema.py` |
+| `ownership_chain` empty on production but sanctions_distance = 0 | stale R2 publish or pre-fix export scope | Republish via indago `scripts/sync_r2.py push-arktrace` (see indago `AGENTS.md`); local dev: arktrace `run_pipeline.py` |
 | Dashboard renders wrong data | this repo React SPA | `app/src/` |
 
 ## Directory map
@@ -42,7 +43,8 @@ Before modifying scoring logic or debugging unexpected scores, identify which la
 ## Key files
 
 - Pipeline entry point: `scripts/run_pipeline.py`
-- Scoring output: `data/processed/candidate_watchlist.parquet`
+- Scoring output: `data/processed/candidate_watchlist.parquet` (includes `ownership_chain` JSON when graph edges exist)
+- Production R2 watchlists: published by **indago** `data-publish.yml` → `push-arktrace` (not arktrace `sync_r2.py push`)
 - Schema: `pipeline/src/ingest/schema.py`
 - Dashboard entry: `app/src/main.tsx`
 

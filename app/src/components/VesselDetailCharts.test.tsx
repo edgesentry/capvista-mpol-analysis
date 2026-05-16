@@ -35,6 +35,35 @@ describe("OwnershipChainPanel", () => {
     expect(html).toContain("No sanctions link in ownership graph");
   });
 
+  it("shows registry message when directly sanctioned but chain is empty", () => {
+    const html = renderToStaticMarkup(
+      <OwnershipChainPanel
+        chainRaw={null}
+        sanctionsDistance={0}
+        vesselName="DOBRYNYA"
+        mmsi="273449240"
+      />,
+    );
+    expect(html).toContain("Directly sanctioned entity");
+    expect(html).toContain("sanctions registry");
+    expect(html).not.toContain("No ownership records in graph for this vessel.");
+  });
+
+  it("renders single-hop sanctioned vessel chain", () => {
+    const html = renderToStaticMarkup(
+      <OwnershipChainPanel
+        chainRaw={JSON.stringify([
+          { hop: 0, kind: "vessel", name: "DOBRYNYA", country: "", sanctioned: true, relation: "vessel" },
+        ])}
+        sanctionsDistance={0}
+        vesselName="DOBRYNYA"
+        mmsi="273449240"
+      />,
+    );
+    expect(html).toContain("MMSI 273449240");
+    expect(html).not.toContain("sanctions registry");
+  });
+
   it("renders operator and sanctions listing hops", () => {
     const chain = [
       { hop: 0, kind: "vessel", name: "ADMIRAL STAR", country: "", sanctioned: false },

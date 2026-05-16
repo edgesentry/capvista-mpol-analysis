@@ -3,6 +3,7 @@ import {
   parseOwnershipChain,
   parseSignals,
   formatSanctionsDistance,
+  ownershipChainEmptyMessage,
   ownershipRelationLabel,
   signalLabel,
   signalSeverity,
@@ -99,7 +100,7 @@ export function OwnershipChainPanel({
       )}
       {!hasChain ? (
         <div style={{ fontSize: "0.68rem", color: "#4a5568", fontStyle: "italic" }}>
-          No ownership records in graph for this vessel.
+          {ownershipChainEmptyMessage(sanctionsDistance)}
         </div>
       ) : (
         <div style={{ fontSize: "0.72rem", color: "#cbd5e0", lineHeight: 1.55 }}>
