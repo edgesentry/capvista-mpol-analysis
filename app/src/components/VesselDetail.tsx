@@ -135,7 +135,7 @@ export function hullSimilarityColor(score: number): string {
   return "#68d391";
 }
 
-function HullSimilarityBadge({ score }: { score: number }) {
+export function HullSimilarityBadge({ score }: { score: number }) {
   const pct = Math.round(score * 100);
   const color = hullSimilarityColor(score);
   const filled = Math.round(score * 10);
