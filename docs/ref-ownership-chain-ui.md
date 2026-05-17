@@ -45,4 +45,4 @@ uv run python .agents/skills/indago-inspect-watchlist/scripts/inspect_watchlist.
 
 - [ui-personas.md](ui-personas.md) — analyst journey step “Check ownership”
 - [ref-llm-grounding.md](ref-llm-grounding.md) — LLM brief does not replace this panel
-- [AGENTS.md](../AGENTS.md) — troubleshooting empty `ownership_chain`
+- [AGENTS.md](https://github.com/edgesentry/arktrace/blob/main/AGENTS.md) — troubleshooting empty `ownership_chain`

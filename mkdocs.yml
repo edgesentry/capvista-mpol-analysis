@@ -54,6 +54,7 @@ nav:
     - Architecture: ref-architecture.md
     - Scoring & Algorithms: ref-technical-solution.md
     - LLM Anti-Hallucination: ref-llm-grounding.md
+    - Ownership Chain UI: ref-ownership-chain-ui.md
     - Investigation Test Cases: ref-investigation-test-cases.md
   - Features & Integration:
     - Use Case Scenarios: feature-scenarios.md
