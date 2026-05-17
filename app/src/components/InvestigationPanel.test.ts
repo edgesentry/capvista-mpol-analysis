@@ -40,6 +40,7 @@ const BASE: VesselRow = {
   sts_candidate_count: 100,
   sanctions_distance: 1,
   ownership_chain: null,
+  hull_visual_similarity: null,
 };
 
 // ── System prompt constraints ─────────────────────────────────────────────────

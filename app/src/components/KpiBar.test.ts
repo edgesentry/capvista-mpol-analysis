@@ -18,6 +18,7 @@ const vessel = (confidence: number): VesselRow => ({
   sts_candidate_count: null,
   sanctions_distance: null,
   ownership_chain: null,
+  hull_visual_similarity: null,
 });
 
 describe("deriveVesselKpis", () => {

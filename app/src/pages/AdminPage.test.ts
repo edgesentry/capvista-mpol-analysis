@@ -18,6 +18,7 @@ const vessel = (confidence: number, region = "singapore"): VesselRow => ({
   sts_candidate_count: null,
   sanctions_distance: null,
   ownership_chain: null,
+  hull_visual_similarity: null,
 });
 
 describe("deriveWatchlistHealth", () => {
