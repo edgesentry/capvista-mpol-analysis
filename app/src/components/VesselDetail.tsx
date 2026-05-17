@@ -129,6 +129,44 @@ function shadowSignalColor(att: number, significant: boolean): string {
   return "#68d391";
 }
 
+export function hullSimilarityColor(score: number): string {
+  if (score >= 0.85) return "#fc8181";
+  if (score >= 0.70) return "#f6ad55";
+  return "#68d391";
+}
+
+function HullSimilarityBadge({ score }: { score: number }) {
+  const pct = Math.round(score * 100);
+  const color = hullSimilarityColor(score);
+  const filled = Math.round(score * 10);
+  return (
+    <div style={{ marginBottom: "0.75rem" }}>
+      <div
+        title={`Hull visual similarity to confirmed Shadow Fleet vessel: ${score.toFixed(4)}`}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "0.5rem",
+          padding: "0.2rem 0.6rem",
+          borderRadius: 4,
+          background: "none",
+          border: `1px solid ${color}`,
+          color,
+          fontSize: "0.72rem",
+          fontWeight: 700,
+          fontFamily: "ui-monospace, monospace",
+        }}
+      >
+        <span style={{ fontSize: "0.6rem", opacity: 0.7 }}>Hull match</span>
+        <span>
+          {"█".repeat(filled)}{"░".repeat(10 - filled)}
+        </span>
+        <span>{pct}%</span>
+      </div>
+    </div>
+  );
+}
+
 export default function VesselDetail({ vessel, conn, onClose, onReviewSaved }: Props) {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [dispatchOpen, setDispatchOpen] = useState(false);
@@ -433,6 +471,11 @@ export default function VesselDetail({ vessel, conn, onClose, onReviewSaved }: P
             </div>
           )}
         </div>
+      )}
+
+      {/* Hull visual similarity badge */}
+      {vessel.hull_visual_similarity != null && vessel.hull_visual_similarity > 0 && (
+        <HullSimilarityBadge score={vessel.hull_visual_similarity} />
       )}
 
       {/* Details table */}

@@ -42,6 +42,7 @@ const BASE_VESSEL: VesselRow = {
   sts_candidate_count: null,
   sanctions_distance: null,
   ownership_chain: null,
+  hull_visual_similarity: null,
 };
 
 // ── SYSTEM_PROMPT constraints ────────────────────────────────────────────────
@@ -130,5 +131,26 @@ describe("buildUserContent", () => {
     expect(content).not.toContain("undefined");
     expect(content).not.toContain("null");
     expect(content).not.toContain("NaN");
+  });
+});
+
+// ── hullSimilarityColor ──────────────────────────────────────────────────────
+
+import { hullSimilarityColor } from "./VesselDetail";
+
+describe("hullSimilarityColor", () => {
+  it("returns red for score >= 0.85", () => {
+    expect(hullSimilarityColor(0.91)).toBe("#fc8181");
+    expect(hullSimilarityColor(0.85)).toBe("#fc8181");
+  });
+
+  it("returns orange for score in [0.70, 0.85)", () => {
+    expect(hullSimilarityColor(0.75)).toBe("#f6ad55");
+    expect(hullSimilarityColor(0.70)).toBe("#f6ad55");
+  });
+
+  it("returns green for score < 0.70", () => {
+    expect(hullSimilarityColor(0.60)).toBe("#68d391");
+    expect(hullSimilarityColor(0.0)).toBe("#68d391");
   });
 });
