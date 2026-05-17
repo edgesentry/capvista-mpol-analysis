@@ -18,7 +18,7 @@ Before modifying scoring logic or debugging unexpected scores, identify which la
 | Composite score unexpected | this repo scoring engine | `pipeline/src/score/composite.py` |
 | SHAP attribution wrong | this repo SHAP layer | `pipeline/src/score/composite.py` |
 | Parquet schema mismatch | indago → arktrace contract | `indago` R2 bucket schema; `pipeline/src/ingest/schema.py` |
-| `ownership_chain` empty on production but sanctions_distance = 0 | stale R2 publish or pre-fix export scope | Republish via indago `scripts/sync_r2.py push-arktrace` (see indago `AGENTS.md`); local dev: arktrace `run_pipeline.py` |
+| `ownership_chain` empty on production but sanctions_distance = 0 | stale R2 publish or pre-fix export scope | Republish via indago `data-publish` / `push-arktrace` (see indago `AGENTS.md`); verify with indago `indago-inspect-watchlist` before UI demo — [docs/ref-ownership-chain-ui.md](docs/ref-ownership-chain-ui.md) |
 | Dashboard renders wrong data | this repo React SPA | `app/src/` |
 
 ## Directory map

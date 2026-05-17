@@ -243,7 +243,7 @@ The live SPA at [arktrace.edgesentry.io](https://arktrace.edgesentry.io) loads *
 
 **Publish path:** [indago](https://github.com/edgesentry/indago) weekly `data-publish.yml` runs `uv run python scripts/sync_r2.py push-arktrace` after scoring. The arktrace repo’s `sync_r2.py push` is for **generation zips** and local dev artifacts only.
 
-Watchlist Parquet includes `ownership_chain` (JSON array of `{role, name, sanctions_distance}`) when the ownership graph has edges for that MMSI. If the column is missing on R2, run indago `data-publish` (or `push-arktrace` after a local pipeline) — ensure indago uses the `score/` watchlist path, not stale flat copies at `data/processed/` root.
+Watchlist Parquet includes `ownership_chain` (JSON array of hops for the Ownership chain panel) when the ownership graph has edges for that MMSI. If the column is missing on R2, run indago `data-publish` (or `push-arktrace` after a local pipeline) — ensure indago uses the `score/` watchlist path, not stale flat copies at `data/processed/` root. UI behaviour and verification steps: [ref-ownership-chain-ui.md](ref-ownership-chain-ui.md).
 
 ### App user pull options
 
