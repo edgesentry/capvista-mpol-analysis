@@ -14,6 +14,7 @@ import ReviewPanel from "./ReviewPanel";
 import { FeatureAttributionChart, OwnershipChainPanel } from "./VesselDetailCharts";
 import DispatchModal from "./DispatchModal";
 import InvestigationPanel from "./InvestigationPanel";
+import { getLlmEndpoint, llmOfflineHint } from "../lib/llmEndpoint";
 
 interface Props {
   vessel: VesselRow;
@@ -24,12 +25,6 @@ interface Props {
 
 // ── LLM brief fetcher ────────────────────────────────────────────────────────
 
-// VITE_LLM_ENDPOINT can be set in Cloudflare Pages environment variables to
-// point at a remote HTTPS inference endpoint.  Falls back to the Caddy HTTPS
-// proxy started by run_llama.sh (:8443 → :8080).  Using HTTPS for both Chrome
-// and Safari avoids mixed-content issues entirely.
-const LLM_ENDPOINT =
-  import.meta.env.VITE_LLM_ENDPOINT ?? "https://localhost:8443/v1/chat/completions";
 const LLM_TIMEOUT_MS = 45_000;
 
 type BriefStatus = "idle" | "loading" | "cached" | "ready" | "offline" | "error";
@@ -71,11 +66,12 @@ export function buildUserContent(v: VesselRow): string {
   );
 }
 
-async function fetchBrief(v: VesselRow, signal: AbortSignal): Promise<string> {
-  // Default endpoint is https://localhost:8443 (Caddy proxy) so both Chrome
-  // and Safari avoid mixed-content issues.  Network errors fall through to
-  // the caller's "offline" handler.
-  const res = await fetch(LLM_ENDPOINT, {
+async function fetchBrief(
+  endpoint: string,
+  v: VesselRow,
+  signal: AbortSignal
+): Promise<string> {
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -199,10 +195,15 @@ export default function VesselDetail({ vessel, conn, onClose, onReviewSaved }: P
           return;
         }
       }
+      const endpoint = getLlmEndpoint();
+      if (!endpoint) {
+        setBriefStatus("offline");
+        return;
+      }
       // 2. Cache miss — call LLM
       const timeout = setTimeout(() => ac.abort(), LLM_TIMEOUT_MS);
       try {
-        const text = await fetchBrief(vessel, ac.signal);
+        const text = await fetchBrief(endpoint, vessel, ac.signal);
         clearTimeout(timeout);
         if (ac.signal.aborted) return;
         setBrief(text);
@@ -228,6 +229,11 @@ export default function VesselDetail({ vessel, conn, onClose, onReviewSaved }: P
 
   async function handleRegenerate() {
     if (!conn) return;
+    const endpoint = getLlmEndpoint();
+    if (!endpoint) {
+      setBriefStatus("offline");
+      return;
+    }
     abortRef.current?.abort();
     const ac = new AbortController();
     abortRef.current = ac;
@@ -235,7 +241,7 @@ export default function VesselDetail({ vessel, conn, onClose, onReviewSaved }: P
     setBriefStatus("loading");
     const timeout = setTimeout(() => ac.abort(), LLM_TIMEOUT_MS);
     try {
-      const text = await fetchBrief(vessel, ac.signal);
+      const text = await fetchBrief(endpoint, vessel, ac.signal);
       clearTimeout(timeout);
       if (ac.signal.aborted) return;
       setBrief(text);
@@ -527,9 +533,7 @@ export default function VesselDetail({ vessel, conn, onClose, onReviewSaved }: P
         {briefStatus === "offline" && (
           <div role="status" style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.35rem 0.6rem", borderRadius: 4, background: "#1a1f2e", border: "1px solid #4a5568", fontSize: "0.72rem", color: "#718096" }}>
             <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4a5568", flexShrink: 0 }} />
-            {LLM_ENDPOINT.startsWith("http://localhost")
-              ? "Local LLM offline — start llama-server on :8080"
-              : "LLM offline"}
+            {llmOfflineHint()}
           </div>
         )}
 

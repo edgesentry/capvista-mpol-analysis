@@ -21,11 +21,8 @@ import {
   resetInvestigationSession,
   type InvestigationSession,
 } from "../lib/investigationStore";
+import { getLlmEndpoint } from "../lib/llmEndpoint";
 
-// ── LLM config (shared with VesselDetail) ────────────────────────────────────
-
-const LLM_ENDPOINT =
-  import.meta.env.VITE_LLM_ENDPOINT ?? "https://localhost:8443/v1/chat/completions";
 const LLM_TIMEOUT_MS = 60_000;
 const LLM_MODEL =
   import.meta.env.VITE_LLM_MODEL ?? "bartowski/Qwen2.5-7B-Instruct-GGUF:Q4_K_M";
@@ -126,7 +123,9 @@ async function callLLM(
   maxTokens: number,
   signal: AbortSignal
 ): Promise<string> {
-  const res = await fetch(LLM_ENDPOINT, {
+  const endpoint = getLlmEndpoint();
+  if (!endpoint) throw new Error("LLM not configured");
+  const res = await fetch(endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

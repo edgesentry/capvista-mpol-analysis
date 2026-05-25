@@ -61,6 +61,7 @@ export async function registerParquet(
 ): Promise<void> {
   await db.registerFileBuffer(name, new Uint8Array(buffer));
   _registeredFiles.add(name);
+  if (name === "causal_effects.parquet") _causalHasMmsi = null;
 }
 
 /** Returns true if the named Parquet file has been registered. */
@@ -191,12 +192,31 @@ export interface CausalEffectRow {
   is_significant: boolean;
 }
 
+/** Cached: production publish may ship regime-only stub (no per-vessel mmsi). */
+let _causalHasMmsi: boolean | null = null;
+
+/** True when causal_effects.parquet includes per-vessel rows (mmsi column). */
+export async function causalEffectsSupportsPerVessel(
+  conn: duckdb.AsyncDuckDBConnection
+): Promise<boolean> {
+  if (!isParquetRegistered("causal_effects.parquet")) return false;
+  if (_causalHasMmsi != null) return _causalHasMmsi;
+  try {
+    await conn.query(`SELECT mmsi FROM read_parquet('causal_effects.parquet') LIMIT 0`);
+    _causalHasMmsi = true;
+  } catch {
+    _causalHasMmsi = false;
+  }
+  return _causalHasMmsi;
+}
+
 /** Query causal ATT for a single vessel. Returns null if not found or table absent. */
 export async function queryCausalEffect(
   conn: duckdb.AsyncDuckDBConnection,
   mmsi: string
 ): Promise<CausalEffectRow | null> {
   if (!isParquetRegistered("causal_effects.parquet")) return null;
+  if (!(await causalEffectsSupportsPerVessel(conn))) return null;
   try {
     const result = await conn.query(
       `SELECT mmsi, regime, att_estimate, att_ci_lower, att_ci_upper, p_value, is_significant
@@ -224,6 +244,7 @@ export async function queryAllCausalEffects(
   conn: duckdb.AsyncDuckDBConnection
 ): Promise<Map<string, CausalEffectRow>> {
   if (!isParquetRegistered("causal_effects.parquet")) return new Map();
+  if (!(await causalEffectsSupportsPerVessel(conn))) return new Map();
   try {
     const result = await conn.query(
       `SELECT mmsi, regime, att_estimate, att_ci_lower, att_ci_upper, p_value, is_significant
