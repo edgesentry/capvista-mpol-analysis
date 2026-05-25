@@ -14,7 +14,12 @@ import ReviewPanel from "./ReviewPanel";
 import { FeatureAttributionChart, OwnershipChainPanel } from "./VesselDetailCharts";
 import DispatchModal from "./DispatchModal";
 import InvestigationPanel from "./InvestigationPanel";
-import { getLlmEndpoint, llmOfflineHint } from "../lib/llmEndpoint";
+import {
+  enableLocalLlm,
+  getLlmEndpoint,
+  isLocalLlmEnabled,
+  llmOfflineHint,
+} from "../lib/llmEndpoint";
 
 interface Props {
   vessel: VesselRow;
@@ -174,6 +179,7 @@ export default function VesselDetail({ vessel, conn, onClose, onReviewSaved }: P
   const [historyOpen, setHistoryOpen] = useState(false);
   const [auditLog, setAuditLog] = useState<Awaited<ReturnType<typeof getAuditLog>>>([]);
   const [expandedRationale, setExpandedRationale] = useState<Set<number>>(new Set());
+  const [localLlmEpoch, setLocalLlmEpoch] = useState(0);
   const abortRef = useRef<AbortController | null>(null);
 
   // Load brief: serve from cache if available, otherwise call LLM
@@ -225,7 +231,12 @@ export default function VesselDetail({ vessel, conn, onClose, onReviewSaved }: P
   // vessel.mmsi is intentional: re-fetch only when the vessel changes, not on
   // every confidence/position update that would recreate the vessel object.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conn, vessel.mmsi]);
+  }, [conn, vessel.mmsi, localLlmEpoch]);
+
+  function handleEnableLocalLlm() {
+    enableLocalLlm();
+    setLocalLlmEpoch((n) => n + 1);
+  }
 
   async function handleRegenerate() {
     if (!conn) return;
@@ -531,9 +542,50 @@ export default function VesselDetail({ vessel, conn, onClose, onReviewSaved }: P
         )}
 
         {briefStatus === "offline" && (
-          <div role="status" style={{ display: "flex", alignItems: "center", gap: "0.4rem", padding: "0.35rem 0.6rem", borderRadius: 4, background: "#1a1f2e", border: "1px solid #4a5568", fontSize: "0.72rem", color: "#718096" }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4a5568", flexShrink: 0 }} />
-            {llmOfflineHint()}
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+            <div
+              role="status"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.4rem",
+                padding: "0.35rem 0.6rem",
+                borderRadius: 4,
+                background: "#1a1f2e",
+                border: "1px solid #4a5568",
+                fontSize: "0.72rem",
+                color: "#718096",
+              }}
+            >
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: "#4a5568",
+                  flexShrink: 0,
+                }}
+              />
+              {llmOfflineHint()}
+            </div>
+            {!isLocalLlmEnabled() && !import.meta.env.VITE_LLM_ENDPOINT && (
+              <button
+                type="button"
+                onClick={handleEnableLocalLlm}
+                style={{
+                  alignSelf: "flex-start",
+                  background: "#1a2e1a",
+                  border: "1px solid #2d6a4f",
+                  color: "#68d391",
+                  cursor: "pointer",
+                  fontSize: "0.68rem",
+                  padding: "0.25rem 0.5rem",
+                  borderRadius: 4,
+                }}
+              >
+                Use local LLM (run_llama.sh on this machine)
+              </button>
+            )}
           </div>
         )}
 

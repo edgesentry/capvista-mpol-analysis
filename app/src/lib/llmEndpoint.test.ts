@@ -16,20 +16,13 @@ describe("resolveLlmEndpoint", () => {
     expect(resolveLlmEndpoint(undefined, false, "localhost")).toBe(LOCAL_LLM_ENDPOINT);
   });
 
-  it("returns null for production host without env", () => {
-    expect(resolveLlmEndpoint("", false, "arktrace.edgesentry.io")).toBeNull();
+  it("returns local default when useLocalLlm opt-in on production host", () => {
+    expect(resolveLlmEndpoint("", false, "arktrace.edgesentry.io", true)).toBe(
+      LOCAL_LLM_ENDPOINT
+    );
   });
-});
 
-describe("llmOfflineHint", () => {
-  it("mentions deployment when endpoint resolves to null", () => {
-    // Production-like resolution (no env, not dev, public host)
+  it("returns null for production host without env or opt-in", () => {
     expect(resolveLlmEndpoint("", false, "arktrace.edgesentry.io")).toBeNull();
-    // llmOfflineHint uses getLlmEndpoint(); message for null is stable
-    expect(
-      resolveLlmEndpoint("", false, "arktrace.edgesentry.io") == null
-        ? "Analyst brief LLM is not configured on this deployment."
-        : ""
-    ).toContain("not configured");
   });
 });

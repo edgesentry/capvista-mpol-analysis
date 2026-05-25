@@ -1,0 +1,26 @@
+# Template for run_llama.sh — CORS enabled so arktrace SPA (any HTTPS origin) can call
+# https://localhost:HTTPS_PORT from the same machine. Binds to loopback only.
+#
+# Substituted at runtime: HTTPS_PORT, UPSTREAM_PORT
+
+{
+	local_certs
+}
+
+https://localhost:HTTPS_PORT {
+	@options method OPTIONS
+	handle @options {
+		header Access-Control-Allow-Origin *
+		header Access-Control-Allow-Methods "GET, POST, OPTIONS"
+		header Access-Control-Allow-Headers "Content-Type, Authorization"
+		respond 204
+	}
+
+	reverse_proxy localhost:UPSTREAM_PORT
+
+	header {
+		Access-Control-Allow-Origin *
+		Access-Control-Allow-Methods "GET, POST, OPTIONS"
+		Access-Control-Allow-Headers "Content-Type, Authorization"
+	}
+}
