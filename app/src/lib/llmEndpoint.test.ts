@@ -28,8 +28,8 @@ function setLocation(url: string) {
 /** Vitest runs with import.meta.env.DEV true — stub production for getLlmEndpoint tests. */
 function stubProductionEnv() {
   vi.stubEnv("MODE", "production");
-  vi.stubEnv("PROD", "true");
-  vi.stubEnv("DEV", "");
+  vi.stubEnv("PROD", true);
+  vi.stubEnv("DEV", false);
   vi.stubEnv("VITE_LLM_ENDPOINT", "");
 }
 

@@ -145,10 +145,12 @@ for i in $(seq 1 30); do
     CADDY_PID=""
     if command -v caddy &>/dev/null; then
       SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-      CADDY_CFG="$(mktemp /tmp/caddy-arktrace-llm.XXXXXX.caddy)"
+      # macOS mktemp requires XXXXXX at end of template (not before .caddyfile).
+      CADDY_CFG="$(mktemp /tmp/caddy-arktrace-llm.XXXXXX)"
       sed -e "s/HTTPS_PORT/${HTTPS_PORT}/g" -e "s/UPSTREAM_PORT/${PORT}/g" \
         "${SCRIPT_DIR}/caddy/local-llm.caddy.in" > "${CADDY_CFG}"
-      caddy run --config "${CADDY_CFG}" > /tmp/caddy-llama.log 2>&1 &
+      # Caddy 2.11+ treats unknown extensions as JSON; our template is Caddyfile syntax.
+      caddy run --config "${CADDY_CFG}" --adapter caddyfile > /tmp/caddy-llama.log 2>&1 &
       CADDY_PID=$!
       # Poll until Caddy is accepting TLS connections (cert renewal can take
       # several seconds on an expired cert — a fixed sleep 1 races this).
