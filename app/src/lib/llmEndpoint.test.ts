@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveLlmEndpoint, llmOfflineHint, LOCAL_LLM_ENDPOINT } from "./llmEndpoint";
+import { resolveLlmEndpoint, LOCAL_LLM_ENDPOINT } from "./llmEndpoint";
 
 describe("resolveLlmEndpoint", () => {
   it("returns configured URL when set", () => {
