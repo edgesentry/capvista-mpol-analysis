@@ -144,10 +144,11 @@ for i in $(seq 1 30); do
     HTTPS_PORT=$((PORT + 363))   # 8080 → 8443
     CADDY_PID=""
     if command -v caddy &>/dev/null; then
-      caddy reverse-proxy \
-        --from "localhost:${HTTPS_PORT}" \
-        --to   "localhost:${PORT}" \
-        > /tmp/caddy-llama.log 2>&1 &
+      SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+      CADDY_CFG="$(mktemp /tmp/caddy-arktrace-llm.XXXXXX.caddy)"
+      sed -e "s/HTTPS_PORT/${HTTPS_PORT}/g" -e "s/UPSTREAM_PORT/${PORT}/g" \
+        "${SCRIPT_DIR}/caddy/local-llm.caddy.in" > "${CADDY_CFG}"
+      caddy run --config "${CADDY_CFG}" > /tmp/caddy-llama.log 2>&1 &
       CADDY_PID=$!
       # Poll until Caddy is accepting TLS connections (cert renewal can take
       # several seconds on an expired cert — a fixed sleep 1 races this).
@@ -164,6 +165,8 @@ for i in $(seq 1 30); do
       done
       if [[ ${CADDY_READY} -eq 1 ]]; then
         echo "   ✅ Caddy HTTPS proxy   → https://localhost:${HTTPS_PORT}/v1"
+        echo "      CORS enabled for arktrace SPA (edgesentry.io / pages.dev / localhost)"
+        echo "      Production: open ?local_llm=1 or Analyst brief → Use local LLM"
         echo "      (Safari: accept the Caddy local-CA cert on first visit)"
       else
         echo "   ❌ Caddy failed to start — local LLM will be offline in Safari"
