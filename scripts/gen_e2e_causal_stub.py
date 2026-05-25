@@ -5,10 +5,7 @@ from pathlib import Path
 
 import polars as pl
 
-OUT = (
-    Path(__file__).resolve().parents[1]
-    / "app/public/fixtures/causal_effects_regime_only.parquet"
-)
+OUT = Path(__file__).resolve().parents[1] / "app/public/fixtures/causal_effects_regime_only.parquet"
 
 SCHEMA = {
     "regime": pl.Utf8,
