@@ -10,7 +10,13 @@
     "lint": "tsc --noEmit && eslint src/",
     "test": "vitest run",
     "test:watch": "vitest",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "dev:e2e": "VITE_MANIFEST_URL=http://127.0.0.1:5173/fixtures/ducklake_manifest.json vite --host 127.0.0.1 --port 5173",
+    "preview:e2e": "vite preview --host 127.0.0.1 --port 4173",
+    "build:e2e": "VITE_MANIFEST_URL=http://127.0.0.1:4173/fixtures/ducklake_manifest.json npm run build",
+    "test:e2e": "playwright test",
+    "test:e2e:preview": "playwright test -c playwright.preview.config.ts",
+    "test:e2e:install": "playwright install chromium --with-deps"
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.29.0",
@@ -26,6 +32,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.60.0",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",

@@ -1,0 +1,34 @@
+{
+  "generated_at": "2026-05-25T00:00:00Z",
+  "base_url": "/fixtures",
+  "files": [
+    {
+      "key": "fixtures/watchlist.parquet",
+      "url": "/fixtures/watchlist.parquet",
+      "size_bytes": 7989,
+      "table": "watchlist",
+      "register_as": "watchlist.parquet"
+    },
+    {
+      "key": "fixtures/validation_metrics.parquet",
+      "url": "/fixtures/validation_metrics.parquet",
+      "size_bytes": 1646,
+      "table": "validation_metrics",
+      "register_as": "validation_metrics.parquet"
+    },
+    {
+      "key": "fixtures/causal_effects_regime_only.parquet",
+      "url": "/fixtures/causal_effects_regime_only.parquet",
+      "size_bytes": 1024,
+      "table": "causal_effects",
+      "register_as": "causal_effects.parquet"
+    },
+    {
+      "key": "fixtures/score_history.parquet",
+      "url": "/fixtures/score_history.parquet",
+      "size_bytes": 13594,
+      "table": "score_history",
+      "register_as": "score_history.parquet"
+    }
+  ]
+}

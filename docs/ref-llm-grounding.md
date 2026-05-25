@@ -92,3 +92,51 @@ No SHAP signal values, ownership paths, or ATT coefficients are included in the 
 ## Verifiability
 
 Every claim in an analyst brief can be verified against the displayed SHAP panel and vessel detail row. The brief is clearly labelled "Analyst brief" and visually separated from the deterministic SHAP attribution and ATT outputs. Analysts are instructed in the [SOP](https://edgesentry.github.io/indago/sop/) to treat the brief as a synthesis aid, not a primary evidence source.
+
+---
+
+## Local LLM setup (`run_llama.sh`)
+
+| Component | URL |
+|---|---|
+| llama-server | `http://localhost:8080/v1` |
+| Caddy (HTTPS + CORS) | `https://localhost:8443/v1` |
+
+```bash
+cd arktrace && bash scripts/run_llama.sh
+curl -sk https://localhost:8443/v1/models | head -c 200
+```
+
+Production SPA: open `https://arktrace.edgesentry.io?local_llm=1` or click **Use local LLM** on the Analyst brief panel (same machine as `run_llama.sh`).
+
+### Failure modes
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `ERR_CONNECTION_REFUSED` on `:8443` | Caddy not running | Restart `run_llama.sh`; check `/tmp/caddy-llama.log` |
+| CORS: duplicate `Access-Control-Allow-Origin` | Caddy + llama both emit CORS | Use current `scripts/caddy/local-llm.caddy.in` (strips upstream headers) |
+| `ERR_CERT_DATE_INVALID` / TLS blocked | Caddy local CA not trusted | Visit `https://localhost:8443/v1/models` once and accept cert (Safari) |
+| Brief shows “not configured” on production | No `VITE_LLM_ENDPOINT` and no opt-in | `?local_llm=1` or **Use local LLM** |
+| `Binder Error: mmsi` in console | R2 `causal_effects.parquet` regime-only stub | Harmless for brief; guarded in `duckdb.ts` (#588) |
+
+---
+
+## E2E tests (Playwright)
+
+CI runs **Tier 1** mock-LLM tests (no GGUF download):
+
+```bash
+cd arktrace/app
+npm ci
+uv run python ../scripts/gen_e2e_causal_stub.py   # regime-only causal fixture
+npm run test:e2e:install
+npm run test:e2e
+```
+
+| Tier | Command | Notes |
+|---|---|---|
+| **1 — CI** | `npm run test:e2e` | Mocks `https://localhost:8443/v1/chat/completions`; fixtures via `VITE_MANIFEST_URL` |
+| **2 — Manual / nightly** | `run_llama.sh` + dev SPA | Real inference; MMSI `352179000` per Cap Vista [#63](https://github.com/edgesentry/edgesentry-commercial/issues/63) |
+| **3 — Preview opt-in** | `analyst-brief-preview.spec.ts` | Production build + **Use local LLM** + mock |
+
+Tracked in [arktrace#589](https://github.com/edgesentry/arktrace/issues/589).

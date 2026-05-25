@@ -16,7 +16,14 @@ https://localhost:HTTPS_PORT {
 		respond 204
 	}
 
-	reverse_proxy localhost:UPSTREAM_PORT
+	# llama-server also emits Access-Control-* when Origin is set; strip upstream
+	# headers so the browser sees a single ACAO value (duplicate values fail CORS).
+	reverse_proxy localhost:UPSTREAM_PORT {
+		header_down -Access-Control-Allow-Origin
+		header_down -Access-Control-Allow-Methods
+		header_down -Access-Control-Allow-Headers
+		header_down -Access-Control-Allow-Credentials
+	}
 
 	header {
 		Access-Control-Allow-Origin *
