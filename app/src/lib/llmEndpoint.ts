@@ -105,6 +105,15 @@ export function isLocalLlmEndpoint(endpoint: string | null): boolean {
   );
 }
 
+/** Show “Use local LLM” when deploy has no remote endpoint and user has not opted in. */
+export function shouldOfferLocalLlmOptIn(
+  configured: string | undefined = import.meta.env.VITE_LLM_ENDPOINT
+): boolean {
+  const hasRemote =
+    typeof configured === "string" && configured.trim().length > 0;
+  return !hasRemote && !isLocalLlmEnabled();
+}
+
 /** User-facing hint when brief generation is unavailable. */
 export function llmOfflineHint(): string {
   const endpoint = getLlmEndpoint();

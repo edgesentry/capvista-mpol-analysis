@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Stub heavy browser dependencies before importing the component.
 vi.mock("../lib/duckdb", () => ({
@@ -25,6 +25,7 @@ vi.mock("../lib/humanise", () => ({
 
 import { SYSTEM_PROMPT, buildUserContent } from "./VesselDetail";
 import type { VesselRow } from "../lib/duckdb";
+import { shouldOfferLocalLlmOptIn } from "../lib/llmEndpoint";
 
 const BASE_VESSEL: VesselRow = {
   mmsi: "123456789",
@@ -44,6 +45,23 @@ const BASE_VESSEL: VesselRow = {
   ownership_chain: null,
   hull_visual_similarity: null,
 };
+
+// ── local LLM opt-in (Analyst brief offline UI) ───────────────────────────────
+
+describe("shouldOfferLocalLlmOptIn (VesselDetail offline button)", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.stubGlobal("location", new URL("https://arktrace.edgesentry.io/") as unknown as Location);
+  });
+
+  it("offers opt-in on production-like host without remote LLM env", () => {
+    expect(shouldOfferLocalLlmOptIn(undefined)).toBe(true);
+  });
+
+  it("does not offer opt-in when remote endpoint is configured at build time", () => {
+    expect(shouldOfferLocalLlmOptIn("https://llm.example/v1/chat/completions")).toBe(false);
+  });
+});
 
 // ── SYSTEM_PROMPT constraints ────────────────────────────────────────────────
 

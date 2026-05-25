@@ -17,8 +17,8 @@ import InvestigationPanel from "./InvestigationPanel";
 import {
   enableLocalLlm,
   getLlmEndpoint,
-  isLocalLlmEnabled,
   llmOfflineHint,
+  shouldOfferLocalLlmOptIn,
 } from "../lib/llmEndpoint";
 
 interface Props {
@@ -568,7 +568,7 @@ export default function VesselDetail({ vessel, conn, onClose, onReviewSaved }: P
               />
               {llmOfflineHint()}
             </div>
-            {!isLocalLlmEnabled() && !import.meta.env.VITE_LLM_ENDPOINT && (
+            {shouldOfferLocalLlmOptIn() && (
               <button
                 type="button"
                 onClick={handleEnableLocalLlm}
